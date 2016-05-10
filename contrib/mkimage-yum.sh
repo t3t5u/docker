@@ -16,6 +16,7 @@ OPTIONS:
                    The default is "Core".
   -y <yumconf>     The path to the yum config to install packages from. The
                    default is /etc/yum.conf for Centos/RHEL and /etc/dnf/dnf.conf for Fedora
+  -f               Write to the archive-file.
 EOOPTS
     exit 1
 }
@@ -27,7 +28,8 @@ if [ -f /etc/dnf/dnf.conf ] && command -v dnf &> /dev/null; then
 	alias yum=dnf
 fi
 install_groups="Core"
-while getopts ":y:p:g:h" opt; do
+archive=0
+while getopts ":y:p:g:fh" opt; do
     case $opt in
         y)
             yum_config=$OPTARG
@@ -40,6 +42,9 @@ while getopts ":y:p:g:h" opt; do
             ;;
         g)
             install_groups="$OPTARG"
+            ;;
+        f)
+            archive=1
             ;;
         \?)
             echo "Invalid option: -$OPTARG"
@@ -127,8 +132,12 @@ if [ -z "$version" ]; then
     version=$name
 fi
 
+if [ $archive -eq 1 ]; then
+tar --numeric-owner -c -C "$target" -f $name-$version.tar .
+else
 tar --numeric-owner -c -C "$target" . | docker import - $name:$version
 
 docker run -i -t --rm $name:$version /bin/bash -c 'echo success'
+fi
 
 rm -rf "$target"
